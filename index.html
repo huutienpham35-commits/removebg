@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>AI Remove Background</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<style>
+:root{
+ --bg:#020617;
+ --glass:rgba(255,255,255,.14);
+ --accent:#38bdf8;
+ --green:#22c55e;
+ --text:#e5e7eb;
+}
+*{box-sizing:border-box;font-family:Inter,Segoe UI}
+body{
+ margin:0;
+ background:linear-gradient(135deg,#020617,#0f172a);
+ color:var(--text);
+ min-height:100vh;
+ display:flex;justify-content:center;align-items:center
+}
+
+/* ==== MINI APP ==== */
+.app{
+ width:720px;
+ backdrop-filter:blur(30px);
+ background:var(--glass);
+ border-radius:22px;
+ padding:18px;
+ box-shadow:0 25px 60px rgba(0,0,0,.6)
+}
+h1{
+ text-align:center;
+ margin-bottom:12px;
+ font-size:20px
+}
+
+/* ==== INPUT ==== */
+input[type=file]{
+ width:100%;
+ padding:12px;
+ border:2px dashed var(--accent);
+ border-radius:12px;
+ background:transparent;
+ color:white;
+ cursor:pointer;
+ font-size:13px
+}
+
+/* ==== BUTTON SYSTEM ==== */
+.btn{
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ gap:6px;
+ padding:10px 14px;
+ border-radius:999px;
+ font-weight:800;
+ font-size:13px;
+ border:none;
+ cursor:pointer;
+ text-decoration:none;
+ color:white;
+ background:linear-gradient(135deg,#0ea5e9,#22c55e);
+ box-shadow:0 8px 20px rgba(14,165,233,.35);
+ transition:.25s
+}
+.btn:hover{
+ transform:translateY(-1px);
+ box-shadow:0 12px 30px rgba(34,197,94,.5)
+}
+.btn:active{
+ transform:scale(.96)
+}
+.btn.secondary{
+ background:linear-gradient(135deg,#64748b,#334155);
+ box-shadow:0 8px 20px rgba(100,116,139,.35)
+}
+
+/* main button */
+button.main{
+ width:100%;
+ margin-top:12px
+}
+
+/* ==== LIST ==== */
+.grid{
+ display:flex;
+ flex-direction:column;
+ gap:18px;
+ margin-top:18px
+}
+.card{
+ background:rgba(255,255,255,.08);
+ border-radius:18px;
+ padding:12px
+}
+.row{
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:12px
+}
+.block{text-align:center;position:relative}
+.block img{
+ width:100%;
+ max-height:200px;
+ object-fit:contain;
+ border-radius:12px;
+ background:#020617
+}
+.label{
+ font-weight:800;
+ font-size:13px;
+ margin-bottom:4px
+}
+
+/* ==== BLUR ==== */
+.blur{
+ position:absolute;
+ inset:0;
+ backdrop-filter:blur(5px);
+ background:rgba(2,6,23,.55);
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ border-radius:12px
+}
+.spinner{
+ width:30px;height:30px;
+ border:4px solid rgba(255,255,255,.25);
+ border-top-color:#38bdf8;
+ border-radius:50%;
+ animation:spin 1s linear infinite
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ==== DOWNLOAD ==== */
+.download{
+ display:flex;
+ justify-content:center;
+ margin-top:6px
+}
+.download a{display:none}
+.download a.show{display:inline-flex}
+
+/* ==== PROGRESS ==== */
+.progressWrap{
+ margin-top:8px
+}
+.progressText{
+ text-align:center;
+ font-size:12px;
+ font-weight:700;
+ margin-bottom:3px
+}
+.progressBar{
+ height:5px;
+ background:#1e293b;
+ border-radius:999px;
+ overflow:hidden
+}
+.progressBar div{
+ height:100%;
+ width:0%;
+ background:linear-gradient(90deg,var(--accent),var(--green));
+ transition:width .25s
+}
+
+@media(max-width:700px){
+ .app{width:95%}
+ .row{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+<h1>✨ AI Remove Background</h1>
+
+<input type="file" id="files" multiple accept="image/*">
+<button class="btn main" onclick="processAll()">🚀 Xoá nền</button>
+
+<div class="grid" id="grid"></div>
+</div>
+
+<script>
+const API_KEY="7wKLiRQFeoMedvLoEpfP9CLq"
+
+function createCard(src){
+ const c=document.createElement("div")
+ c.className="card"
+ c.innerHTML=`
+ <div class="row">
+  <div class="block">
+   <div class="label">Ảnh gốc</div>
+   <img src="${src}">
+   <div class="download">
+    <a class="btn secondary show" href="${src}" download>⬇ Gốc</a>
+   </div>
+  </div>
+  <div class="block">
+   <div class="label">Đã xoá nền</div>
+   <img class="afterImg">
+   <div class="blur"><div class="spinner"></div></div>
+   <div class="download">
+    <a class="btn afterDown">⬇ PNG</a>
+   </div>
+  </div>
+ </div>
+ <div class="progressWrap">
+  <div class="progressText">Đang chờ...</div>
+  <div class="progressBar"><div></div></div>
+ </div>`
+ return c
+}
+
+function setProgress(c,p,t){
+ c.querySelector(".progressBar div").style.width=p+"%"
+ c.querySelector(".progressText").innerText=`${t} (${p}%)`
+}
+
+async function removeBg(file,c){
+ setProgress(c,10,"Tải ảnh")
+ const f=new FormData()
+ f.append("image_file",file)
+ f.append("size","auto")
+ setProgress(c,30,"Gửi AI")
+ const r=await fetch("https://api.remove.bg/v1.0/removebg",{
+  method:"POST",
+  headers:{ "X-Api-Key":API_KEY },
+  body:f
+ })
+ setProgress(c,80,"Xử lý")
+ if(!r.ok){setProgress(c,0,"Lỗi");return}
+ const b=await r.blob()
+ const u=URL.createObjectURL(b)
+ c.querySelector(".afterImg").src=u
+ const d=c.querySelector(".afterDown")
+ d.href=u; d.download="no-bg.png"; d.classList.add("show")
+ c.querySelector(".blur").remove()
+ setProgress(c,100,"Hoàn tất")
+}
+
+async function processAll(){
+ const grid=document.getElementById("grid")
+ grid.innerHTML=""
+ const files=[...document.getElementById("files").files]
+ await Promise.all(files.map(f=>{
+  const src=URL.createObjectURL(f)
+  const c=createCard(src)
+  grid.appendChild(c)
+  return removeBg(f,c)
+ }))
+}
+</script>
+</body>
+</html>
